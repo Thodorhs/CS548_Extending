@@ -60,7 +60,7 @@ CS-548: Cloud-native Software Architectures Computer Science Department • Univ
   ```
 
   ## Part2: 
-After copying nessecery files from hy548 github repo (controller.py,  greeting-crd.yaml,  hello-world.yaml,  kubeclient.py,  requirements.txt). We can proceed to create the Dcokerfile and greeting-controller.yaml.
+After copying nessecery files from hy548 github repo (controller.py,  greeting-crd.yaml,  hello-world.yaml,  kubeclient.py,  requirements.txt). We can proceed to create the Dokerfile and greeting-controller.yaml.
 
 a) For the dockerfile build and push:
 
@@ -118,7 +118,7 @@ we get:
 2024-05-22 18:14:38 INFO check_and_apply: Working in namespace: kubernetes-dashboard
 ```
 
-kubectl get greetings
+``kubectl get greetings``
 
 we get:
 
@@ -127,3 +127,90 @@ NAME           AGE
 hello-to-all   17m
 hello-world    17m
 ```
+
+## Part 3:
+After copying nessecery files from hy548 github repo (controller.py, webhook.yaml,  requirements.txt). We can proceed to create the Dokerfile.
+For the dockerfile build and push:
+
+  ```docker build -t thodorisp/controller-app:v2 .```
+  
+  ```docker push thodorisp/controller-app:v2```
+  
+Update Webhook Configuration:
+
+Update the IP address in the webhook.yaml file to your local IP address.
+Replace the image reference with your Docker image in webhook.yaml.
+update this part in the webhook.yaml:
+
+  ```
+ spec:                         
+      containers:
+      - image: thodorisp/controller-app:v1 #here
+        name: webhook-controller
+        env:
+        - name: CUSTOM_LABEL
+          value: "custom-label"  #here
+        ports:
+        - containerPort: 8000
+```
+
+then apply the webhook:
+
+```kubectl apply -f webhook.yaml```
+
+we get :
+
+```
+namespace/custom-label-injector unchanged
+issuer.cert-manager.io/issuer-selfsigned created
+certificate.cert-manager.io/controller-certificate created
+service/controller unchanged
+configmap/controller-proxy-config unchanged
+deployment.apps/controller unchanged
+mutatingwebhookconfiguration.admissionregistration.k8s.io/custom-label-injector configured
+```
+
+Create Test Namespace:
+
+``kubectl create namespace test``
+
+Label the "test" namespace to enable the custom-label-injector:
+
+``kubectl label namespace test custom-label-injector=enabled``
+
+create a test yaml file:
+
+```
+apiVersion: v1
+kind: Pod
+metadata:
+  name: test-pod
+  namespace: test
+spec:
+  containers:
+  - name: nginx
+    image: nginx:latest
+```
+
+And apply ``kubectl apply -f test.yaml``
+
+You can verify the deployment by running:
+
+``kubectl get deployments -n custom-label-injector``
+
+
+And to see the pods created by the deployment:
+
+``kubectl get pods -n custom-label-injector``
+
+we get:
+
+```
+NAME                          READY   STATUS    RESTARTS   AGE
+controller-548699cd59-rj2lw   1/1     Running   0          22m
+```
+
+we can see the pods in the test namespace:
+
+``kubectl get pods -A``
+
