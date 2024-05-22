@@ -1,0 +1,53 @@
+# Save this as greeting-controller.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: greeting-controller-role
+rules:
+  - apiGroups: ["hy548.csd.uoc.gr"]
+    resources: ["greetings"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: [""]
+    resources: ["services", "pods"]
+    verbs: ["create", "update", "delete", "list", "get", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: greeting-controller-binding
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: greeting-controller-role
+subjects:
+  - kind: ServiceAccount
+    name: greeting-controller
+    namespace: default
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: greeting-controller
+  namespace: default
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: greeting-controller
+  labels:
+    app: greeting-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: greeting-controller
+  template:
+    metadata:
+      labels:
+        app: greeting-controller
+    spec:
+      serviceAccountName: greeting-controller
+      containers:
+        - name: greeting-controller
+          image: thodorisp/greeting-controller:latest
+
